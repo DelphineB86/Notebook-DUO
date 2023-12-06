@@ -1,0 +1,300 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct 20 15:04:55 2022
+
+@author: Delphine
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt #librairie de visualisations avec python déjà dans anaconda
+import numpy as np
+from datetime import datetime ,timedelta
+from pathlib import Path
+import os
+import re
+
+
+x=0
+tps1=0
+tps2=0
+
+
+Tps1=[]
+Tps2=[]
+T=[]
+S=[]
+X=[]
+Y=[]
+D=[]
+V=[]
+PV=[]
+Y01=[]
+Y02=[]
+MD=[]
+MV=[]
+VSD=[]
+DSD=[]
+
+tempsS=[]
+TEMPS=[]
+Lum=[]
+lum=0
+
+
+
+ij = open("Results from 07 062022 Photos box 1 bis out in µm per min.csv","r")
+df=ij.read()#ouvre fichier excel 
+# df = pd.read_excel("Results from Photos box 1 out in unit per min.xlsx")
+
+# jk= open("acquisition.xlsx","r")
+# clim=jk.read()#ouvre fichier excel 
+
+# print(clim)
+
+df1=df.split("\n") 
+df2=df1[1:-1]#supprime la premiere et derniere valeur du tableau
+
+for x in df2:
+    valeur=x.split(",")#fabrique une liste de valeurs séparés par une virgule
+    T.append (valeur[0])#ajoute la première valeur de la liste valeur à la liste T
+    S.append (valeur[1])
+    X.append (valeur[2])
+    Y.append (valeur[3])
+    D.append (valeur[4])
+    V.append (valeur[5])
+    PV.append (valeur[6])
+
+T=[int(i) for i in T]
+S=[int(i) for i in S]
+X=[int(i) for i in X]
+Y=[int(i) for i in Y]
+D=[float(i) for i in D]
+V=[float(i) for i in V]
+PV=[int(i) for i in PV]
+
+# print (type(T[1])) #connaitre la classe de ce que contient la liste
+
+t=pd.Series(T)
+s=pd.Series(S)
+x=pd.Series(X)
+y=pd.Series(Y)
+d=pd.Series(D)
+v=pd.Series(V)
+pv=pd.Series(PV)
+dm=pd.Series(MD)
+vm=pd.Series(MV)
+
+
+df3 = pd.DataFrame({"Track":t,"Slice":s,"X":x,"Y":y,"Distance":d,"Velocity":v,"Pixel":pv})#création d'un nouveau tableau
+
+
+Track_nb1= df3.loc[df3['Track'] == 1] # sélectionne les lignes de df3 dont la valeur de la colonne "track" est de 1
+Track_nb2= df3.loc[df3['Track'] == 2]
+      
+# print(Track_nb1["Slice"])
+taille1= len(Track_nb1['Track'])
+taille2= len(Track_nb2['Track'])
+
+
+for i in range(taille1):
+    tps1=tps1+45
+    Tps1.append(tps1)
+    
+for i in range(taille2):
+    tps2=tps2+45
+    Tps2.append(tps2)
+
+Track_nb1.insert(1,"temps(min)",Tps1)
+Track_nb2.insert(1,"temps(min)",Tps2)  
+
+Track_nb1["temps(h)"]=Track_nb1["temps(min)"].apply(lambda x : x/60) 
+Track_nb2["temps(h)"]=Track_nb2["temps(min)"].apply(lambda x : x/60)  
+
+
+# y01= Track_nb1.head(1)["Y"]
+# y02= Track_nb2.head(1)["Y"]
+
+y01=Track_nb1["Y"].median()
+y02=Track_nb2["Y"].median()
+
+
+for i in Track_nb1['Y']: 
+    Y01.append(int(i)-int(y01))
+    
+Track_nb1.insert(6,"Y-Y0",Y01)
+    
+for i in Track_nb2['Y']: 
+    Y02.append(int(i)-int(y02))
+    
+Track_nb2.insert(6,"Y-Y0",Y02)
+
+    
+fig= plt.figure(dpi=600)# création de la boite dans laquelle on va mettre le graph
+fig.suptitle('End-of-leaf path')
+ax= fig.add_subplot(111)
+fig=plt.gcf().subplots_adjust( hspace = 0.4)#création des marges de la figure entre graphs
+plt.rcParams.update({'font.size': 10})  #création des paramètres spécifiques au graph comme taille de la police   
+ax.plot(Track_nb1["X"],Track_nb1["Y"],color="lightgreen",linewidth=1,label="leaf 1")#création du graph avec comme arguments (x,y,couleur,nom)
+ax.plot(Track_nb2["X"],Track_nb2["Y"],color="green",linewidth=1,label="leaf 2") 
+ax.legend()#affiche la légende par défaut
+ax.set(ylabel="dimension en Y ")#affiche le titre du graphique, les noms des axes.
+ax.set(xlabel="dimension en X ")
+plt.savefig("07062022 box 1 mouvement global des feuilles ",dpi=600)
+
+
+fig2=plt.figure(dpi=600)
+fig2.suptitle('Instantaneous velocity')
+ax1= fig2.add_subplot(211)
+ax2= fig2.add_subplot(212)
+fig2=plt.gcf().subplots_adjust( hspace = 0.5)#création des marges de la figure entre graphs
+plt.rcParams.update({'font.size': 10})  #création des paramètres spécifiques au graph comme taille de la police   
+ax1.plot(Track_nb1["temps(h)"],Track_nb1["Velocity"],color="lightgreen",linewidth=1,label="leaf 1")#création du graph avec comme arguments (x,y,couleur,nom)
+ax2.plot(Track_nb2["temps(h)"],Track_nb2["Velocity"],color="green",linewidth=1,label="leaf 2") 
+ax1.legend()#affiche la légende par défaut
+ax1.set(ylabel="Velocity ")#affiche le titre du graphique, les noms des axes.
+ax1.set(xlabel="temps(h)")
+ax2.legend()#affiche la légende par défaut
+ax2.set(ylabel="Velocity")#affiche le titre du graphique, les noms des axes.
+ax2.set(ylim=(0,0.5),xlabel="temps(h)")
+ax1.set(ylim=(0,0.5))
+plt.savefig(" 07062022 box1 velocity  ",dpi=600)
+
+fig2=plt.figure(dpi=600)
+fig2.suptitle('Distance travelled')
+ax1= fig2.add_subplot(211)
+ax2= fig2.add_subplot(212)
+fig2=plt.gcf().subplots_adjust( hspace = 0.5)#création des marges de la figure entre graphs
+plt.rcParams.update({'font.size': 10})  #création des paramètres spécifiques au graph comme taille de la police   
+ax1.plot(Track_nb1["temps(h)"],Track_nb1["Distance"],color="lightgreen",linewidth=1,label="leaf 1")#création du graph avec comme arguments (x,y,couleur,nom)
+ax2.plot(Track_nb2["temps(h)"],Track_nb2["Distance"],color="green",linewidth=1,label="leaf 2") 
+ax1.legend()#affiche la légende par défaut
+ax1.set(ylabel="Distance travelled")#affiche le titre du graphique, les noms des axes.
+ax1.set(xlabel="temps(h)")
+ax2.legend()#affiche la légende par défaut
+ax2.set(ylabel="Distance travelled")#affiche le titre du graphique, les noms des axes.
+ax2.set(ylim=(0,20),xlabel="temps(h)")
+ax1.set(ylim=(0,20))
+plt.savefig(" 07062022 box1 distance travelled  ",dpi=600)
+
+
+fig3=plt.figure(dpi=600)
+fig3.suptitle('sens movement')
+ax= fig3.add_subplot(111)
+plt.rcParams.update({'font.size': 10})  #création des paramètres spécifiques au graph comme taille de la police   
+# fig3,ax= plt.subplot()
+ax.stem(Track_nb1["temps(h)"],Track_nb1["Y-Y0"],label="leaf 1",linefmt='lightgreen',markerfmt=('none'))#création du graph avec comme arguments (x,y,couleur,nom)
+ax.stem(Track_nb2["temps(h)"],Track_nb2["Y-Y0"],label="leaf 2",linefmt='green',markerfmt=('none')) 
+ax.legend()#affiche la légende par défaut
+ax.set(xlim=(0, 120))
+ax.set(ylim=(-300, 300))
+ax.set(ylabel="Sens movement")#affiche le titre du graphique, les noms des axes.
+ax.set(xlabel="temps(h)")
+plt.savefig("07062022 box 1 sens movement ",dpi=600)
+
+# créer figure mvt des feuilles et luminosité ________________________________________________________________________________
+
+
+file_path = Path(r"D:\Documents\RESULTATS\haricot\Mouvement haricot\12h jour-12h nuit\manip 15h15 07062022\\acquisition.xlsx")
+f = open(file_path,"r")
+# open ("D:\\Documents\\RESULTATS\\haricot\\Mouvement haricot\\12h jour-12h nuit\\manip 10h46 15032023")
+df1 = pd.ExcelFile(file_path)
+
+df1=df1.parse('Sheet1')#sélectionne la feuille à utiliser dans le fichier excel.
+taille = int(df1["temps"].count())#affiche le nombre d'éléments de la colonne CH1 mis en entier
+cumul=0
+#création d'une colonne temps en secondes
+tempsS.append(0)
+
+for x in df1["temps"]:# jusqu'à la valeur de l'étendue(range) définie dans taille
+      date_object = datetime.strptime(x, "%H:%M:%S")
+      TEMPS.append(date_object)
+      
+for x in range(taille):
+    if  x!= 0 :
+        dt=TEMPS[x]-TEMPS[x-1]
+        sec=float(dt.seconds)
+        cumul=sec+cumul
+        tempsS.append(cumul)
+
+# print(tempsS)
+
+WD= os.chdir(r"D:\Documents\RESULTATS\haricot\Mouvement haricot\12h jour-12h nuit\manip 15h15 07062022")
+# file_path2 = Path(r"D:\\Documents\\RESULTATS\\haricot\\Mouvement haricot\\12h jour-12h nuit\\manip 10h46 15032023\\humidite.txt")
+# f = open(file_path2,"r")
+         
+df3= pd.read_csv('humidite.txt', delimiter=";", encoding = "ISO-8859-1", names = ['nombre', 'heure', 'box1','box2','box3','box4'])
+
+# print (df3)
+
+# print(df3)
+
+# dts=datetime.strptime(dt, "%S")
+# print(dts)
+
+    
+df1.insert(3,"temps(s)",tempsS)#insert la colonne dans le tableau avec ces arguments (position de la colonne dans le tableau, le nom de l'en tête, où se trouve les données)
+
+
+df1["temps(h)"]=df1["temps(s)"].apply(lambda x : x/3600)#change le temps en min et applique une fonction lambda, ici /60
+# print(df1)
+
+# df1["CH1 (V)"]=df1["CH1"].apply(lambda x : x*1000)
+# df1["CH2 (V)"]=df1["CH2"].apply(lambda x : x*1000)
+
+# print(df1["temps(s)"])
+H=[]
+df2 = pd.DataFrame({"Date":df1["Date"],"temps(h)":df1["temps(h)"],"voie 1 B1(V)":df1["CH1_B1 (V)"],"voie 2 B1(V)":df1["CH2_B1 (V)"],"voie 1 B2(V)":df1["CH1_B2 (V)"],"voie 2 B2(V)":df1["CH2_B2 (V)"],"voie1 B3(V)":df1["CH1_B3 (V)"],"voie2 B3(V)":df1["CH2_B3 (V)"],"voie1 B4(V)":df1["CH1_B4 (V)"],"voie2 B4(V)":df1["CH2_B4 (V)"],"Température B1":df1["temperature_B1 (°C)"],"Température B2":df1["temperature_B2 (°C)"],"Température B3":df1["temperature_B3 (°C)"],"Température B4":df1["temperature_B4 (°C)"],"Lumière":df1["Lumi_B2 (ohms)"], "Humidité":df3["box4"]})#création d'un nouveau tableau
+
+df2["Humidité"]=df2["Humidité"].iloc[1:]
+df2 = df2.replace(np.NaN, 0)
+for x in df2["Humidité"]:
+   x1=str(x)
+   x2=x1.replace(',','.')
+   H.append(float(x2))
+df2["Humidité"]=pd.Series(H)
+# print(df2)
+
+
+
+# print(df2["Humidité"])
+# print(df2["temps(h)"])
+
+for x in df2["Lumière"]:
+  if x<270 :
+    lum = 100
+  else :
+         lum = 0
+  Lum.append(lum)
+
+df2.insert(15,"Lumière(%)",Lum)
+df2.to_excel("data.xlsx", index=True, header=True)
+
+fig4=plt.figure(dpi=600)
+fig4.suptitle('sens movement and light')
+ax1= fig4.add_subplot(111)
+plt.rcParams.update({'font.size': 10})  #création des paramètres spécifiques au graph comme taille de la police   
+# fig3,ax= plt.subplot()
+ax2=ax1.twinx()
+ax1.stem(Track_nb1["temps(h)"],Track_nb1["Y-Y0"],label="leaf 1",linefmt='lightgreen',markerfmt=('none'))#création du graph avec comme arguments (x,y,couleur,nom)
+ax1.stem(Track_nb2["temps(h)"],Track_nb2["Y-Y0"],label="leaf 2",linefmt='green',markerfmt=('none')) 
+ax1.legend()#affiche la légende par défaut
+ax1.set(xlim=(0, 120))
+ax1.set(ylim=(-400, 400))
+ax1.set(ylabel="Sens movement")#affiche le titre du graphique, les noms des axes.
+ax1.set(xlabel="temps(h)")
+ax2.plot(df2["temps(h)"],df2["Lumière(%)"],color="yellow",linewidth=1,label="Lumière(%)")
+ax2.set(ylabel="Lumière (%)", xlim=(0,124))
+plt.savefig("07062022 sens movement box 1 ",dpi=600)
+
+
+# MD.append (Track_nb1["Distance"].mean())
+# MD.append(Track_nb2["Distance"].mean())
+# MV.append(Track_nb1["Velocity"].mean())
+# MV.append (Track_nb2["Velocity"].mean())
+
+# dm=pd.Series(MD)
+# vm=pd.Series(MV)
+
+# df4 = pd.DataFrame({"Ditance average":MD,"Velocity average":MV})#création d'un nouveau tableau
+
+# df4.to_csv('moyennes 01022023 box 2.csv')
